@@ -61,6 +61,40 @@ class RangeCollection {
     if (!this.paramVerify(range)) {
       return false;
     }
+
+    if (this.ranges.length === 0) {
+      this.ranges.push(range);
+    } else {
+      let tempIndex = 0,
+        tempRange = range;
+
+      let i = 0;
+      while (i < this.ranges.length) {
+        const compareResult = this.compareRange(this.ranges[i], range);
+
+        if (compareResult === "contain") {
+          return false;
+        } else if (compareResult === "left") {
+          this.ranges.splice(tempIndex, i - tempIndex, tempRange);
+          return false;
+        } else if (compareResult === "leftCross") {
+          tempRange[1] = this.ranges[i][1];
+          this.ranges.splice(tempIndex, i - tempIndex, tempRange);
+          return false;
+        } else if (compareResult === "right") {
+          tempIndex = i + 1;
+          i++;
+        } else if (compareResult === "contained") {
+          tempIndex = tempIndex === 0 ? i : 0;
+          i++;
+        } else if (compareResult === "rightCross") {
+          tempRange[0] = this.ranges[i][0];
+          tempIndex = i;
+          i++;
+        }
+      }
+      this.ranges.splice(tempIndex, this.ranges.length - tempIndex, tempRange);
+    }
   }
 
   /**
@@ -79,6 +113,14 @@ class RangeCollection {
    */
   print() {
     // TODO: implement this
+    let printStr = "";
+    let num = 0;
+    while (num < this.ranges.length) {
+      printStr += `[${this.ranges[num][0]}, ${this.ranges[num][1]}) `;
+      num++;
+    }
+    console.log("print:", printStr);
+    // return printStr;
   }
 }
 
