@@ -52,45 +52,61 @@ class RangeCollection {
       return "rightCross";
     }
   }
+
   /**
    * Adds a range to the collection
    * @param {Array<number>} range - Array of two integers that specify beginning and end of range.
    */
   add(range) {
     // TODO: implement this
+
+    // verify
     if (!this.paramVerify(range)) {
       return false;
     }
 
+    // blank Array
     if (this.ranges.length === 0) {
       this.ranges.push(range);
-    } else {
-      let tempIndex = 0,
-        tempRange = range;
+      return false;
+    }
 
-      let i = 0;
-      while (i < this.ranges.length) {
-        const compareResult = this.compareRange(this.ranges[i], range);
+    // add action
+    // tempIndex tempRange for insert/replace
+    let tempIndex = 0,
+      tempRange = range;
+    let i = 0;
+    while (i < this.ranges.length) {
+      const compareResult = this.compareRange(this.ranges[i], range);
 
-        if (compareResult === "contain") {
+      switch (compareResult) {
+        case "contain": {
           return false;
-        } else if (compareResult === "left") {
+        }
+        case "left": {
           this.ranges.splice(tempIndex, i - tempIndex, tempRange);
           return false;
-        } else if (compareResult === "leftCross") {
+        }
+        case "leftCross": {
           tempRange[1] = this.ranges[i][1];
           this.ranges.splice(tempIndex, i - tempIndex, tempRange);
           return false;
-        } else if (compareResult === "right") {
+        }
+        case "right": {
           tempIndex = i + 1;
           i++;
-        } else if (compareResult === "contained") {
+          break;
+        }
+        case "contained": {
           tempIndex = tempIndex === 0 ? i : 0;
           i++;
-        } else if (compareResult === "rightCross") {
+          break;
+        }
+        case "rightCross": {
           tempRange[0] = this.ranges[i][0];
           tempIndex = i;
           i++;
+          break;
         }
       }
       this.ranges.splice(tempIndex, this.ranges.length - tempIndex, tempRange);
@@ -103,42 +119,55 @@ class RangeCollection {
    */
   remove(range) {
     // TODO: implement this
+
+    // verify
     if (!this.paramVerify(range) || !this.ranges.length) {
       return;
     }
 
+    // remove action
     let tempRange = range;
 
     let i = 0;
     while (i < this.ranges.length) {
       const compareResult = this.compareRange(this.ranges[i], tempRange);
 
-      if (compareResult === "left") {
-        return false;
-      } else if (compareResult === "contained") {
-        this.ranges.splice(i, 1);
-      } else if (compareResult === "contain") {
-        const temp = [];
-        if (tempRange[0] > this.ranges[i][0]) {
-          temp.push([this.ranges[i][0], tempRange[0]]);
+      switch (compareResult) {
+        case "left": {
+          return false;
         }
-        if (this.ranges[i][1] > tempRange[1]) {
-          temp.push([tempRange[1], this.ranges[i][1]]);
+        case "contained": {
+          this.ranges.splice(i, 1);
+          break;
         }
+        case "contain": {
+          const temp = [];
+          if (tempRange[0] > this.ranges[i][0]) {
+            temp.push([this.ranges[i][0], tempRange[0]]);
+          }
+          if (this.ranges[i][1] > tempRange[1]) {
+            temp.push([tempRange[1], this.ranges[i][1]]);
+          }
 
-        this.ranges.splice(i, 1, ...temp);
-        return false;
-      } else if (compareResult === "leftCross") {
-        tempRange[0] = tempRange[1];
-        tempRange[1] = this.ranges[i][1];
-        this.ranges.splice(i, 1, tempRange);
-        return false;
-      } else if (compareResult === "right") {
-        i++;
-      } else if (compareResult === "rightCross") {
-        this.ranges.splice(i, 1, [this.ranges[i][0], tempRange[0]]);
-        tempRange[0] = this.ranges[i][1];
-        i++;
+          this.ranges.splice(i, 1, ...temp);
+          return false;
+        }
+        case "leftCross": {
+          tempRange[0] = tempRange[1];
+          tempRange[1] = this.ranges[i][1];
+          this.ranges.splice(i, 1, tempRange);
+          return false;
+        }
+        case "right": {
+          i++;
+          break;
+        }
+        case "rightCross": {
+          this.ranges.splice(i, 1, [this.ranges[i][0], tempRange[0]]);
+          tempRange[0] = this.ranges[i][1];
+          i++;
+          break;
+        }
       }
     }
   }
@@ -185,6 +214,10 @@ rc.print();
 rc.add([3, 8]);
 rc.print();
 // Should display: [1, 8) [10, 21)
+
+rc.add([1, 100]);
+rc.print();
+// Should display: [1, 100)
 
 rc.remove([10, 10]);
 rc.print();
