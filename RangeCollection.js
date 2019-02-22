@@ -103,8 +103,43 @@ class RangeCollection {
    */
   remove(range) {
     // TODO: implement this
-    if (!this.paramVerify(range)) {
-      return false;
+    if (!this.paramVerify(range) || !this.ranges.length) {
+      return;
+    }
+
+    let tempRange = range;
+
+    let i = 0;
+    while (i < this.ranges.length) {
+      const compareResult = this.compareRange(this.ranges[i], tempRange);
+
+      if (compareResult === "left") {
+        return false;
+      } else if (compareResult === "contained") {
+        this.ranges.splice(i, 1);
+      } else if (compareResult === "contain") {
+        const temp = [];
+        if (tempRange[0] > this.ranges[i][0]) {
+          temp.push([this.ranges[i][0], tempRange[0]]);
+        }
+        if (this.ranges[i][1] > tempRange[1]) {
+          temp.push([tempRange[1], this.ranges[i][1]]);
+        }
+
+        this.ranges.splice(i, 1, ...temp);
+        return false;
+      } else if (compareResult === "leftCross") {
+        tempRange[0] = tempRange[1];
+        tempRange[1] = this.ranges[i][1];
+        this.ranges.splice(i, 1, tempRange);
+        return false;
+      } else if (compareResult === "right") {
+        i++;
+      } else if (compareResult === "rightCross") {
+        this.ranges.splice(i, 1, [this.ranges[i][0], tempRange[0]]);
+        tempRange[0] = this.ranges[i][1];
+        i++;
+      }
     }
   }
 
