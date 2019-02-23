@@ -34,26 +34,6 @@ class RangeCollection {
   }
 
   /**
-   * Compare 2 ranges
-   * @param {Array<number>} rA/rB - Array of two integers that specify beginning and end of range.
-   */
-  compareRange(rA, rB) {
-    if (rA[0] > rB[1]) {
-      return "left";
-    } else if (rA[1] < rB[0]) {
-      return "right";
-    } else if (rA[0] <= rB[0] && rA[1] >= rB[1]) {
-      return "contain";
-    } else if (rA[0] >= rB[0] && rA[1] <= rB[1]) {
-      return "contained";
-    } else if (rA[0] >= rB[0] && rA[1] > rB[1]) {
-      return "leftCross";
-    } else if (rA[0] < rB[0] && rA[1] <= rB[1]) {
-      return "rightCross";
-    }
-  }
-
-  /**
    * Adds a range to the collection
    * @param {Array<number>} range - Array of two integers that specify beginning and end of range.
    */
@@ -62,55 +42,44 @@ class RangeCollection {
 
     // verify
     if (!this.paramVerify(range)) {
-      return false;
+      return;
     }
 
     // blank Array
     if (this.ranges.length === 0) {
       this.ranges.push(range);
-      return false;
+      return;
     }
 
     // add action
-    // tempIndex tempRange for insert/replace
-    let tempIndex = 0,
-      tempRange = range;
+    let counter = 0;
     let i = 0;
     while (i < this.ranges.length) {
-      const compareResult = this.compareRange(this.ranges[i], range);
+      const rangeCur = this.ranges[i];
 
-      switch (compareResult) {
-        case "contain": {
-          return false;
+      if (rangeCur[1] >= range[1]) {
+        // left
+        if (rangeCur[0] > range[1]) {
+          this.ranges.splice(i - counter, counter, range);
+        } else if (
+          (range[0] < rangeCur[0] && rangeCur[0] <= range[1]) ||
+          rangeCur[1] === range[1]
+        ) {
+          counter++;
+          range[1] = rangeCur[1];
+          this.ranges.splice(i - counter + 1, counter, range);
         }
-        case "left": {
-          this.ranges.splice(tempIndex, i - tempIndex, tempRange);
-          return false;
+        return false;
+      } else {
+        // right or right cross
+        if (rangeCur[1] >= range[0]) {
+          range[0] = range[0] < rangeCur[0] ? range[0] : rangeCur[0];
+          counter++;
         }
-        case "leftCross": {
-          tempRange[1] = this.ranges[i][1];
-          this.ranges.splice(tempIndex, i - tempIndex, tempRange);
-          return false;
-        }
-        case "right": {
-          tempIndex = i + 1;
-          i++;
-          break;
-        }
-        case "contained": {
-          tempIndex = tempIndex === 0 ? i : 0;
-          i++;
-          break;
-        }
-        case "rightCross": {
-          tempRange[0] = this.ranges[i][0];
-          tempIndex = i;
-          i++;
-          break;
-        }
+        i++;
       }
-      this.ranges.splice(tempIndex, this.ranges.length - tempIndex, tempRange);
     }
+    this.ranges.splice(this.ranges.length - counter, counter, range);
   }
 
   /**
@@ -126,47 +95,53 @@ class RangeCollection {
     }
 
     // remove action
-    let tempRange = range;
-
     let i = 0;
     while (i < this.ranges.length) {
-      const compareResult = this.compareRange(this.ranges[i], tempRange);
+      const curRange = this.ranges[i];
 
-      switch (compareResult) {
-        case "left": {
-          return false;
-        }
-        case "contained": {
+      if (curRange[0] >= range[1]) {
+        // left
+        return;
+      }
+
+      if (curRange[1] < range[0]) {
+        // right
+        i++;
+        continue;
+      }
+
+      if (curRange[1] < range[1]) {
+        // right cross
+        if (curRange[0] < range[0]) {
+          this.ranges.splice(i, 1, [curRange[0], range[0]]);
+          i++;
+        } else {
           this.ranges.splice(i, 1);
-          break;
         }
-        case "contain": {
-          const temp = [];
-          if (tempRange[0] > this.ranges[i][0]) {
-            temp.push([this.ranges[i][0], tempRange[0]]);
-          }
-          if (this.ranges[i][1] > tempRange[1]) {
-            temp.push([tempRange[1], this.ranges[i][1]]);
-          }
+        range[0] = curRange[1];
+        continue;
+      }
 
-          this.ranges.splice(i, 1, ...temp);
-          return false;
-        }
-        case "leftCross": {
-          tempRange[0] = tempRange[1];
-          tempRange[1] = this.ranges[i][1];
-          this.ranges.splice(i, 1, tempRange);
-          return false;
-        }
-        case "right": {
-          i++;
-          break;
-        }
-        case "rightCross": {
-          this.ranges.splice(i, 1, [this.ranges[i][0], tempRange[0]]);
-          tempRange[0] = this.ranges[i][1];
-          i++;
-          break;
+      if (curRange[1] >= range[1]) {
+        if (curRange[0] >= range[0]) {
+          // left cross
+          if (curRange[1] === range[1]) {
+            this.ranges.splice(i, 1);
+            return;
+          }
+          this.ranges.splice(i, 1, [range[1], curRange[1]]);
+          return;
+        } else if (curRange[0] < range[0]) {
+          //contain
+          let newRanges = [];
+          if (range[0] > curRange[0]) {
+            newRanges.push([curRange[0], range[0]]);
+          }
+          if (curRange[1] > range[1]) {
+            newRanges.push([range[1], curRange[1]]);
+          }
+          this.ranges.splice(i, 1, ...newRanges);
+          return;
         }
       }
     }
@@ -215,22 +190,30 @@ rc.add([3, 8]);
 rc.print();
 // Should display: [1, 8) [10, 21)
 
-rc.add([1, 100]);
+rc.add([50, 100]);
 rc.print();
-// Should display: [1, 100)
+// Should display: [1, 8) [10, 21) [50, 100)
+
+rc.add([40, 51]);
+rc.print();
+// Should display: [1, 8) [10, 21) [40, 100)
 
 rc.remove([10, 10]);
 rc.print();
-// Should display: [1, 8) [10, 21)
+// Should display: [1, 8) [10, 21) [40, 100)
 
 rc.remove([10, 11]);
 rc.print();
-// Should display: [1, 8) [11, 21)
+// Should display: [1, 8) [11, 21) [40, 100)
 
 rc.remove([15, 17]);
 rc.print();
-// Should display: [1, 8) [11, 15) [17, 21)
+// Should display: [1, 8) [11, 15) [17, 21) [40, 100)
 
 rc.remove([3, 19]);
 rc.print();
-// Should display: [1, 3) [19, 21)
+// Should display: [1, 3) [19, 21) [40, 100)
+
+rc.remove([20, 45]);
+rc.print();
+// Should display: [1, 3) [19, 20) [45, 100)
